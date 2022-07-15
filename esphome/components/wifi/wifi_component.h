@@ -265,6 +265,9 @@ class WiFiComponent : public Component {
 
   int8_t wifi_rssi();
 
+  Trigger<> *get_connect_trigger() const;
+  Trigger<> *get_disconnect_trigger() const;
+
  protected:
   static std::string format_mac_addr(const uint8_t mac[6]);
   void setup_ap_config_();
@@ -336,6 +339,9 @@ class WiFiComponent : public Component {
   bool btm_{false};
   bool rrm_{false};
 #endif
+
+  Trigger<> *connect_trigger_;
+  Trigger<> *disconnect_trigger_;
 };
 
 extern WiFiComponent *global_wifi_component;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)

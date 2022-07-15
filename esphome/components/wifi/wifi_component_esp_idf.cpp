@@ -617,6 +617,7 @@ void WiFiComponent::wifi_process_event_(IDFWiFiEvent *data) {
     ESP_LOGV(TAG, "Event: Connected ssid='%s' bssid=" LOG_SECRET("%s") " channel=%u, authmode=%s", buf,
              format_mac_addr(it.bssid).c_str(), it.channel, get_auth_mode_str(it.authmode));
     s_sta_connected = true;
+    this->connect_trigger_->trigger();
 
   } else if (data->event_base == WIFI_EVENT && data->event_id == WIFI_EVENT_STA_DISCONNECTED) {
     const auto &it = data->data.sta_disconnected;
@@ -636,6 +637,7 @@ void WiFiComponent::wifi_process_event_(IDFWiFiEvent *data) {
     s_sta_connected = false;
     s_sta_connecting = false;
     error_from_callback_ = true;
+    this->disconnect_trigger_->trigger();
 
   } else if (data->event_base == IP_EVENT && data->event_id == IP_EVENT_STA_GOT_IP) {
     const auto &it = data->data.ip_got_ip;

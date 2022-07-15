@@ -477,6 +477,7 @@ void WiFiComponent::wifi_event_callback_(esphome_wifi_event_id_t event, esphome_
       ESP_LOGV(TAG, "Event: Connected ssid='%s' bssid=" LOG_SECRET("%s") " channel=%u, authmode=%s", buf,
                format_mac_addr(it.bssid).c_str(), it.channel, get_auth_mode_str(it.authmode));
 
+      this->connect_trigger_->trigger();
       break;
     }
     case ESPHOME_EVENT_ID_WIFI_STA_DISCONNECTED: {
@@ -507,6 +508,7 @@ void WiFiComponent::wifi_event_callback_(esphome_wifi_event_id_t event, esphome_
       }
 
       s_sta_connecting = false;
+      this->disconnect_trigger_->trigger();
       break;
     }
     case ESPHOME_EVENT_ID_WIFI_STA_AUTHMODE_CHANGE: {

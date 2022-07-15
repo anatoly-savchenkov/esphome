@@ -161,7 +161,9 @@ void WiFiComponent::loop() {
   }
 }
 
-WiFiComponent::WiFiComponent() { global_wifi_component = this; }
+WiFiComponent::WiFiComponent() : connect_trigger_(new Trigger<>()), disconnect_trigger_(new Trigger<>()) {
+  global_wifi_component = this;
+}
 
 bool WiFiComponent::has_ap() const { return this->has_ap_; }
 bool WiFiComponent::has_sta() const { return !this->sta_.empty(); }
@@ -628,6 +630,9 @@ bool WiFiComponent::is_esp32_improv_active_() {
   return false;
 #endif
 }
+
+Trigger<> *WiFiComponent::get_connect_trigger() const { return this->connect_trigger_; }
+Trigger<> *WiFiComponent::get_disconnect_trigger() const { return this->disconnect_trigger_; }
 
 void WiFiAP::set_ssid(const std::string &ssid) { this->ssid_ = ssid; }
 void WiFiAP::set_bssid(bssid_t bssid) { this->bssid_ = bssid; }
