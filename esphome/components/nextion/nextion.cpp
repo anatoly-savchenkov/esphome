@@ -30,11 +30,12 @@ bool Nextion::send_command_(const std::string &command) {
     return false;
   }
 
-  ESP_LOGN(TAG, "send_command %s", command.c_str());
+  ESP_LOGE(TAG, "[%04d] -> %s", this->write_count_, command.c_str());
 
   this->write_str(command.c_str());
   const uint8_t to_send[3] = {0xFF, 0xFF, 0xFF};
   this->write_array(to_send, sizeof(to_send));
+  this->write_count_++;
   return true;
 }
 
@@ -105,11 +106,19 @@ bool Nextion::check_connect_() {
 }
 
 void Nextion::reset_(bool reset_nextion) {
-  uint8_t d;
+  size_t garbage = 0;
+  // Read out everything from the UART FIFO
+  while (this->available()) {
+    uint8_t value;
+    this->read_byte(&value);
+    ESP_LOGE(TAG, "[%04d] Skip %02d: 0x%02x from nextion", this->write_count_, garbage, value);
+    garbage++;
+  }
 
-  while (this->available()) {  // Clear receive buffer
-    this->read_byte(&d);
-  };
+  // Warn about unexpected bytes in the protocol
+  if (garbage)
+    ESP_LOGE(TAG, "[%04d] Skip %d bytes from nextion", this->write_count_, garbage);
+
   this->nextion_queue_.clear();
 }
 
@@ -278,11 +287,16 @@ bool Nextion::remove_from_q_(bool report_empty) {
 }
 
 void Nextion::process_serial_() {
-  uint8_t d;
+  uint8_t d = 0;
 
   while (this->available()) {
-    read_byte(&d);
+    this->read_byte(&d);
     this->command_data_ += d;
+  }
+
+  if (this->command_data_.length()) {
+    ESP_LOGE(TAG, "[%04d] <- %s (ps)", this->read_count_, format_hex_pretty(reinterpret_cast<const uint8_t*>(&this->command_data_[0]), this->command_data_.length()).c_str());
+    this->read_count_++;
   }
 }
 // nextion.tech/instruction-set/
@@ -908,6 +922,9 @@ uint16_t Nextion::recv_ret_string_(std::string &response, uint32_t timeout, bool
       break;
     }
   }
+
+  ESP_LOGE(TAG, "[%04d] <- %s (rrs)", this->read_count_, format_hex_pretty(reinterpret_cast<const uint8_t*>(&response[0]), response.length()).c_str());
+  this->read_count_++;
 
   if (ff_flag)
     response = response.substr(0, response.length() - 3);  // Remove last 3 0xFF

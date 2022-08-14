@@ -739,6 +739,10 @@ class Nextion : public NextionBase, public PollingComponent, public uart::UARTDe
   void all_components_send_state_(bool force_update = false);
   uint64_t comok_sent_ = 0;
   bool remove_from_q_(bool report_empty = true);
+
+  int write_count_{0};
+  int read_count_{0};
+
   /**
    * @brief
    * Sends commands ignoring of the Nextion has been setup.
@@ -845,7 +849,7 @@ class Nextion : public NextionBase, public PollingComponent, public uart::UARTDe
 
   std::string command_data_;
   bool is_connected_ = false;
-  uint32_t startup_override_ms_ = 8000;
+  uint32_t startup_override_ms_ = 1500;
   uint32_t max_q_age_ms_ = 8000;
   uint32_t started_ms_ = 0;
   bool sent_setup_commands_ = false;
