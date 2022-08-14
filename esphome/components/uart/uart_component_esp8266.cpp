@@ -55,6 +55,42 @@ uint32_t ESP8266UartComponent::get_config() {
   return config;
 }
 
+uint32_t ESP8266UartComponent::get_sw_config() {
+  uint32_t config = 0;
+
+  if (this->parity_ == UART_CONFIG_PARITY_NONE) {
+    config |= SWSERIAL_PARITY_NONE;
+  } else if (this->parity_ == UART_CONFIG_PARITY_EVEN) {
+    config |= SWSERIAL_PARITY_EVEN;
+  } else if (this->parity_ == UART_CONFIG_PARITY_ODD) {
+    config |= SWSERIAL_PARITY_ODD;
+  }
+
+  switch (this->data_bits_) {
+    case 5:
+      config |= SWSERIAL_5N1;
+      break;
+    case 6:
+      config |= SWSERIAL_6N1;
+      break;
+    case 7:
+      config |= SWSERIAL_7N1;
+      break;
+    case 8:
+      config |= SWSERIAL_8N1;
+      break;
+  }
+
+  if (this->stop_bits_ == 1) {
+    config |= 0;
+  } else {
+    config |= 0200;
+  }
+
+  return config;
+}
+
+
 void ESP8266UartComponent::setup() {
   ESP_LOGCONFIG(TAG, "Setting up UART bus...");
   // Use Arduino HardwareSerial UARTs if all used pins match the ones
@@ -92,9 +128,19 @@ void ESP8266UartComponent::setup() {
     this->hw_serial_->begin(this->baud_rate_, config);
     this->hw_serial_->setRxBufferSize(this->rx_buffer_size_);
   } else {
-    this->sw_serial_ = new ESP8266SoftwareSerial();  // NOLINT
-    this->sw_serial_->setup(tx_pin_, rx_pin_, this->baud_rate_, this->stop_bits_, this->data_bits_, this->parity_,
-                            this->rx_buffer_size_);
+    SoftwareSerialConfig sw_config = static_cast<SoftwareSerialConfig>(get_sw_config());
+    int8_t rx_pin = -1, tx_pin = -1;
+    if (rx_pin_ != nullptr) rx_pin = rx_pin_->get_pin();
+    if (tx_pin_ != nullptr) tx_pin = tx_pin_->get_pin();
+
+    this->sw_serial_ = new SoftwareSerial();
+    this->sw_serial_->begin(this->baud_rate_, SWSERIAL_8N1/*sw_config*/, rx_pin, tx_pin, false, this->rx_buffer_size_);
+  }
+}
+
+void ESP8266UartComponent::loop() {
+  if(this->sw_serial_ != nullptr) {
+    this->sw_serial_->perform_work();
   }
 }
 
@@ -134,8 +180,7 @@ void ESP8266UartComponent::write_array(const uint8_t *data, size_t len) {
   if (this->hw_serial_ != nullptr) {
     this->hw_serial_->write(data, len);
   } else {
-    for (size_t i = 0; i < len; i++)
-      this->sw_serial_->write_byte(data[i]);
+    this->sw_serial_->write(data, len);
   }
 #ifdef USE_UART_DEBUGGER
   for (size_t i = 0; i < len; i++) {
@@ -149,7 +194,7 @@ bool ESP8266UartComponent::peek_byte(uint8_t *data) {
   if (this->hw_serial_ != nullptr) {
     *data = this->hw_serial_->peek();
   } else {
-    *data = this->sw_serial_->peek_byte();
+    *data = this->sw_serial_->peek();
   }
   return true;
 }
@@ -159,8 +204,7 @@ bool ESP8266UartComponent::read_array(uint8_t *data, size_t len) {
   if (this->hw_serial_ != nullptr) {
     this->hw_serial_->readBytes(data, len);
   } else {
-    for (size_t i = 0; i < len; i++)
-      data[i] = this->sw_serial_->read_byte();
+    this->sw_serial_->readBytes(data, len);
   }
 #ifdef USE_UART_DEBUGGER
   for (size_t i = 0; i < len; i++) {
@@ -184,6 +228,7 @@ void ESP8266UartComponent::flush() {
     this->sw_serial_->flush();
   }
 }
+#if 0
 void ESP8266SoftwareSerial::setup(InternalGPIOPin *tx_pin, InternalGPIOPin *rx_pin, uint32_t baud_rate,
                                   uint8_t stop_bits, uint32_t data_bits, UARTParityOptions parity,
                                   size_t rx_buffer_size) {
@@ -298,6 +343,7 @@ int ESP8266SoftwareSerial::available() {
     return avail + this->rx_buffer_size_;
   return avail;
 }
+#endif
 
 }  // namespace uart
 }  // namespace esphome

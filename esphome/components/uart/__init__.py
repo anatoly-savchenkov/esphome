@@ -226,6 +226,10 @@ async def to_code(config):
     if CONF_DEBUG in config:
         await debug_to_code(config[CONF_DEBUG], var)
 
+    if CORE.is_esp8266:
+        cg.add_library("plerup/EspSoftwareSerial", "6.16.1")
+
+
 
 # A schema to use for all UART devices, all UART integrations must extend this!
 UART_DEVICE_SCHEMA = cv.Schema(
