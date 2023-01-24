@@ -468,6 +468,7 @@ void WiFiComponent::wifi_event_callback(System_Event_t *event) {
       ESP_LOGV(TAG, "Event: Connected ssid='%s' bssid=%s channel=%u", buf, format_mac_addr(it.bssid).c_str(),
                it.channel);
       s_sta_connected = true;
+      global_wifi_component->connect_trigger_->trigger();
       break;
     }
     case EVENT_STAMODE_DISCONNECTED: {
@@ -485,6 +486,7 @@ void WiFiComponent::wifi_event_callback(System_Event_t *event) {
       }
       s_sta_connected = false;
       s_sta_connecting = false;
+      global_wifi_component->disconnect_trigger_->trigger();
       break;
     }
     case EVENT_STAMODE_AUTHMODE_CHANGE: {

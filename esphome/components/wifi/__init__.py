@@ -32,6 +32,8 @@ from esphome.const import (
     CONF_KEY,
     CONF_USERNAME,
     CONF_EAP,
+    CONF_ON_CONNECT,
+    CONF_ON_DISCONNECT,
 )
 from esphome.core import CORE, HexInt, coroutine_with_priority
 from esphome.components.esp32 import add_idf_sdkconfig_option
@@ -284,6 +286,8 @@ CONFIG_SCHEMA = cv.All(
                 "This option has been removed. Please use the [disabled] option under the "
                 "new mdns component instead."
             ),
+            cv.Optional(CONF_ON_CONNECT): automation.validate_automation(),
+            cv.Optional(CONF_ON_DISCONNECT): automation.validate_automation(),
         }
     ),
     _validate,
@@ -400,8 +404,15 @@ async def to_code(config):
 
     cg.add_define("USE_WIFI")
 
-    # Register at end for OTA safe mode
+    # Register before OTA safe mode check
     await cg.register_component(var, config)
+
+    for conf in config.get(CONF_ON_CONNECT, []):
+        # OTA safe mode check invoked through here
+        await automation.build_automation(var.get_connect_trigger(), [], conf)
+
+    for conf in config.get(CONF_ON_DISCONNECT, []):
+        await automation.build_automation(var.get_disconnect_trigger(), [], conf)
 
 
 @automation.register_condition("wifi.connected", WiFiConnectedCondition, cv.Schema({}))
